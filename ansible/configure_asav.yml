@@ -1,0 +1,162 @@
+---
+# ──────────────────────────────────────────────────────────────────
+# configure_asav.yml — Ansible playbook to configure the Cisco ASAv
+#
+# Configures:
+#   - Interfaces (inside / outside)
+#   - NAT (PAT for outbound)
+#   - ACLs permitting HTTP, HTTPS, ICMP inspection
+#   - Static routes
+#   - Logging
+#
+# Prerequisites:
+#   - pip install ansible cisco.asa
+#   - ansible-galaxy collection install cisco.asa
+#   - ASAv is booted and reachable via SSH on the Elastic IP
+#
+# Usage:
+#   ansible-playbook -i ansible/inventory.ini ansible/configure_asav.yml
+# ──────────────────────────────────────────────────────────────────
+- name: Configure Cisco ASAv Firewall
+  hosts: asav
+  gather_facts: false
+
+  vars:
+    inside_network: "10.0.1.0"       # Workload subnet A CIDR
+    inside_mask: "255.255.255.0"
+    inside_network_b: "10.0.3.0"     # Workload subnet B CIDR
+    inside_mask_b: "255.255.255.0"
+    alb_subnet_a: "10.0.4.0"         # ALB subnet A
+    alb_subnet_b: "10.0.5.0"         # ALB subnet B
+    alb_mask: "255.255.255.0"
+    alb_server_ip: "10.0.4.13"       # ALB private IP (us-east-1a)
+    firewall_vip: "10.0.2.112"       # Secondary IP on outside ENI (NAT VIP)
+    vpc_cidr: "10.0.0.0"
+    vpc_mask: "255.255.0.0"
+
+  tasks:
+    # ── Interface Configuration ─────────────────────────────────
+    - name: Configure outside interface (Management0/0)
+      cisco.asa.asa_config:
+        lines:
+          - nameif outside
+          - security-level 0
+          - ip address dhcp setroute
+          - no shutdown
+        parents: interface Management0/0
+
+    - name: Configure inside interface (TenGigabitEthernet0/0)
+      cisco.asa.asa_config:
+        lines:
+          - nameif inside
+          - security-level 100
+          - ip address dhcp
+          - no shutdown
+        parents: interface TenGigabitEthernet0/0
+
+    # ── Access Lists ────────────────────────────────────────────
+    - name: Create outside-to-inside ACL (allow inspection traffic)
+      cisco.asa.asa_config:
+        lines:
+          - access-list OUTSIDE_IN extended permit tcp any any eq 80
+          - access-list OUTSIDE_IN extended permit tcp any any eq 443
+          - access-list OUTSIDE_IN extended permit icmp any any
+
+    - name: Create inside-to-outside ACL (allow outbound)
+      cisco.asa.asa_config:
+        lines:
+          - access-list INSIDE_OUT extended permit ip {{ inside_network }} {{ inside_mask }} any
+          - access-list INSIDE_OUT extended permit ip {{ inside_network_b }} {{ inside_mask_b }} any
+
+    - name: Apply ACLs to interfaces
+      cisco.asa.asa_config:
+        lines:
+          - access-group OUTSIDE_IN in interface outside
+          - access-group INSIDE_OUT in interface inside
+
+    # ── NAT — PAT for outbound workload traffic ─────────────────
+    - name: Configure PAT (outbound NAT)
+      cisco.asa.asa_config:
+        lines:
+          - nat (inside,outside) source dynamic any interface
+
+    # ── Static Routes ───────────────────────────────────────────
+    # 10.0.1.0/24 is the connected subnet (inside interface) — no route needed.
+    # 10.0.3.0/24 (workload subnet B) routes via the VPC gateway at 10.0.1.1.
+    # 10.0.4.0/24 and 10.0.5.0/24 (ALB subnets) also route via the inside gateway.
+    - name: Configure static routes
+      cisco.asa.asa_config:
+        lines:
+          - route inside {{ inside_network_b }} {{ inside_mask_b }} 10.0.1.1
+          - route inside {{ alb_subnet_a }} {{ alb_mask }} 10.0.1.1
+          - route inside {{ alb_subnet_b }} {{ alb_mask }} 10.0.1.1
+
+    # ── ICMP Inspection ─────────────────────────────────────────
+    - name: Enable ICMP inspection
+      cisco.asa.asa_config:
+        parents:
+          - policy-map global_policy
+          - class inspection_default
+        lines:
+          - inspect icmp
+
+    # ── ICMP Permit (allow ping to firewall interfaces) ──────────
+    - name: Permit ICMP on outside and inside interfaces
+      cisco.asa.asa_config:
+        lines:
+          - icmp permit any outside
+          - icmp permit any inside
+
+    # ── Inbound NAT — route internet HTTP through firewall to ALB ─
+    # Uses a secondary IP (VIP) on the outside ENI so traffic is not
+    # treated as "self-addressed".  Twice NAT translates both source
+    # (PAT to inside IP) and destination (VIP → ALB) for symmetric
+    # return traffic.
+    - name: Create NAT objects for inbound HTTP
+      cisco.asa.asa_config:
+        lines:
+          - object network ALB_SERVER
+          -   host {{ alb_server_ip }}
+          - object network FIREWALL_VIP
+          -   host {{ firewall_vip }}
+          - object service HTTP_PORT
+          -   service tcp destination eq 80
+
+    - name: Configure twice NAT for inbound HTTP
+      cisco.asa.asa_config:
+        lines:
+          - nat (outside,inside) source dynamic any interface destination static FIREWALL_VIP ALB_SERVER service HTTP_PORT HTTP_PORT
+
+    # ── Logging
+    - name: Enable logging
+      cisco.asa.asa_config:
+        lines:
+          - logging enable
+          - logging buffered informational
+          - logging trap informational
+
+    # ── Save configuration ──────────────────────────────────────
+    - name: Write running config to startup
+      cisco.asa.asa_config:
+        save: true
+
+    # ── Verify ──────────────────────────────────────────────────
+    - name: Show interface status
+      cisco.asa.asa_command:
+        commands:
+          - show interface ip brief
+      register: intf_output
+
+    - name: Display interface status
+      debug:
+        var: intf_output.stdout_lines
+
+    - name: Show access-lists
+      cisco.asa.asa_command:
+        commands:
+          - show access-list
+      register: acl_output
+
+    - name: Display ACLs
+      debug:
+        var: acl_output.stdout_lines

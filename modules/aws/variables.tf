@@ -1,36 +1,34 @@
-variable "aws_region" {
-  description = "AWS region for resources"
-  type        = string
-  default     = "us-east-1"
-}
-
-# Network Configuration
-variable "aws_vpc_cidr" {
-  description = "CIDR block for AWS VPC"
+variable "region" {
+  description = "AWS region"
   type        = string
 }
 
-variable "aws_subnet_cidr" {
-  description = "CIDR block for AWS workload subnet A"
+variable "vpc_cidr" {
+  description = "CIDR block for VPC"
   type        = string
 }
 
-variable "aws_subnet_b_cidr" {
-  description = "CIDR block for AWS workload subnet B (second AZ for ALB)"
+variable "workload_subnet_cidr" {
+  description = "CIDR block for workload subnet A"
   type        = string
 }
 
-variable "aws_fw_subnet_cidr" {
-  description = "CIDR block for AWS firewall subnet"
+variable "workload_subnet_b_cidr" {
+  description = "CIDR block for workload subnet B (second AZ for ALB)"
   type        = string
 }
 
-variable "aws_alb_subnet_a_cidr" {
+variable "firewall_subnet_cidr" {
+  description = "CIDR block for firewall subnet"
+  type        = string
+}
+
+variable "alb_subnet_a_cidr" {
   description = "CIDR block for ALB public subnet A"
   type        = string
 }
 
-variable "aws_alb_subnet_b_cidr" {
+variable "alb_subnet_b_cidr" {
   description = "CIDR block for ALB public subnet B"
   type        = string
 }
@@ -56,13 +54,8 @@ variable "ecs_asg_max" {
   type        = number
 }
 
-# Resource Tagging
 variable "tags" {
-  description = "Tags to apply to all resources"
+  description = "Tags to apply to resources"
   type        = map(string)
-  default = {
-    Environment = "Development"
-    Project     = "CiscoFirewall-Infrastructure"
-    ManagedBy   = "Terraform"
-  }
+  default     = {}
 }

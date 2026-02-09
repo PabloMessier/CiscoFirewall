@@ -30,3 +30,5 @@ terraform.rc
 terraform.tfvars
 .env
 credentials.json
+*.pem
+scripts/asav_deploy_output.env
