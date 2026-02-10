@@ -331,6 +331,33 @@ tracking scale-in is intentionally conservative:
 6. **PAYG licensing** — Avoids degraded mode (100 connections, 100 Kbps)
    that applies to unlicensed/BYOL instances.
 
+## Lessons learned
+
+This project demonstrated that a Cisco ASAv virtual firewall appliance can
+be deployed as an EC2 instance to inspect traffic inline on AWS — something
+not covered in typical bootcamps or certifications.  Key challenges solved
+along the way:
+
+- **ASAv boot time** — up to 30 minutes, requiring separation from Terraform
+  into AWS CLI scripts to avoid blocking infrastructure deployments.
+- **Asymmetric routing** — the ALB and ECS instances cannot share subnets when
+  the workload route table points to the firewall; dedicated ALB subnets with
+  their own IGW route table were required.
+- **Self-addressed NAT limitation** — the ASAv treats traffic to its own
+  interface IP as management-plane, bypassing NAT.  A secondary VIP on the
+  outside ENI was the workaround.
+- **Twice NAT for symmetric return traffic** — both source and destination
+  must be translated so responses flow back through the firewall instead of
+  taking the ALB's direct IGW path.
+- **Interface detection** — the ASAv on c5 instances uses `TenGigabitEthernet`
+  (10G ENA), not `GigabitEthernet`, and requires a reboot to detect
+  hot-plugged ENIs.
+- **SSH compatibility** — the ASAv only supports `ssh-rsa`, requiring
+  `paramiko` for Ansible and explicit algorithm flags for manual SSH.
+- **Scale-in latency** — target tracking auto-scaling with multiple policies
+  requires all low alarms to agree before scaling in, resulting in a
+  ~15-minute observation window after load drops.
+
 ## Cleanup
 
 ```bash
