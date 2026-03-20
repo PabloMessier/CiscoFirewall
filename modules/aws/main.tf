@@ -74,4 +74,4 @@ resource "aws_internet_gateway" "main" {
   })
 }
 
-# Route tables and security groups defined in firewall.tf and ecs.tf
+# Route tables and security groups defined in firewall.tf and workload.tf

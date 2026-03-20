@@ -31,23 +31,13 @@ output "firewall_security_group_id" {
   value       = aws_security_group.firewall.id
 }
 
-# ECS
-output "ecs_cluster_name" {
-  description = "ECS cluster name"
-  value       = aws_ecs_cluster.main.name
-}
-
-output "ecs_cluster_arn" {
-  description = "ECS cluster ARN"
-  value       = aws_ecs_cluster.main.arn
-}
-
+# Workload
 output "alb_dns_name" {
-  description = "ALB DNS name for the Hello World ECS service"
-  value       = aws_lb.ecs.dns_name
+  description = "ALB DNS name for the Hello World workload"
+  value       = aws_lb.workload.dns_name
 }
 
 output "alb_arn" {
   description = "ALB ARN"
-  value       = aws_lb.ecs.arn
+  value       = aws_lb.workload.arn
 }

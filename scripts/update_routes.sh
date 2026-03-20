@@ -14,7 +14,7 @@
 # ──────────────────────────────────────────────────────────────────
 set -euo pipefail
 
-REGION="us-east-1"
+REGION=""                            # Set to your AWS region (e.g. us-east-2)
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 

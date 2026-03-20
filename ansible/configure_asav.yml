@@ -24,13 +24,14 @@
   vars:
     inside_network: "10.0.1.0"       # Workload subnet A CIDR
     inside_mask: "255.255.255.0"
+    inside_gateway: "10.0.1.1"        # VPC gateway for inside subnet
     inside_network_b: "10.0.3.0"     # Workload subnet B CIDR
     inside_mask_b: "255.255.255.0"
     alb_subnet_a: "10.0.4.0"         # ALB subnet A
     alb_subnet_b: "10.0.5.0"         # ALB subnet B
     alb_mask: "255.255.255.0"
-    alb_server_ip: "10.0.4.13"       # ALB private IP (us-east-1a)
-    firewall_vip: "10.0.2.112"       # Secondary IP on outside ENI (NAT VIP)
+    alb_server_ip: ""                # ALB private IP (set after deployment)
+    firewall_vip: ""                 # Secondary IP on outside ENI (NAT VIP, set after deployment)
     vpc_cidr: "10.0.0.0"
     vpc_mask: "255.255.0.0"
 
@@ -87,9 +88,9 @@
     - name: Configure static routes
       cisco.asa.asa_config:
         lines:
-          - route inside {{ inside_network_b }} {{ inside_mask_b }} 10.0.1.1
-          - route inside {{ alb_subnet_a }} {{ alb_mask }} 10.0.1.1
-          - route inside {{ alb_subnet_b }} {{ alb_mask }} 10.0.1.1
+          - route inside {{ inside_network_b }} {{ inside_mask_b }} {{ inside_gateway }}
+          - route inside {{ alb_subnet_a }} {{ alb_mask }} {{ inside_gateway }}
+          - route inside {{ alb_subnet_b }} {{ alb_mask }} {{ inside_gateway }}
 
     # ── ICMP Inspection ─────────────────────────────────────────
     - name: Enable ICMP inspection

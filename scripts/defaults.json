@@ -1,0 +1,8 @@
+{
+    "DEFAULT_URL"         : "",
+    "DEFAULT_WORKERS"     : 100,
+    "DEFAULT_STRESS_SECS" : 300,   
+    "DEFAULT_REST_SECS"   : 300,     
+    "DEFAULT_TIMEOUT"     : 5,
+    "REPORT_INTERVAL"     : 10 
+}

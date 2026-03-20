@@ -14,8 +14,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-REGION="us-east-1"
-KEY_NAME="cisco-asav-key"            # Change to your key pair name
+REGION=""                            # Set to your AWS region (e.g. us-east-2)
+KEY_NAME=""                          # Set to your EC2 key pair name
 
 # ── Cisco ASAv Instance Profile ───────────────────────────────────
 # c5.large  = 2 vCPU / 4 GB  / 3 interfaces (mgmt + inside + outside)

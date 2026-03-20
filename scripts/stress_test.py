@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-stress_test.py — Stress test the ECS cluster through the ALB.
+stress_test.py — Stress test the workload ASG through the ALB.
 
 Generates high-volume HTTP traffic in cycles:
   5 minutes of sustained load → 5 minutes rest → repeat
 
-Designed to trigger ECS Service Auto Scaling → Capacity Provider → ASG
-scaling from 2 → 4 → 8 instances.
+Designed to trigger ASG Auto Scaling (ALB request count + CPU)
+scaling from 2 → 4 → 6 instances.
 
 Usage:
   python3 scripts/stress_test.py
@@ -21,18 +21,51 @@ import signal
 import sys
 import threading
 import time
+import subprocess
+import json
+import logging
 from collections import Counter
 from datetime import datetime
+from pathlib import Path
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError, URLError
 
-# ── Defaults ──────────────────────────────────────────────────────
-DEFAULT_URL = "http://52.0.225.32"
-DEFAULT_WORKERS = 100
-DEFAULT_STRESS_SECS = 300   # 5 minutes
-DEFAULT_REST_SECS = 300     # 5 minutes
-DEFAULT_TIMEOUT = 5
-REPORT_INTERVAL = 10        # print progress every N seconds
+# ── Logging ───────────────────────────────────────────────────────
+# Console handler — INFO and WARNING to stdout
+logging.basicConfig(
+    format='[%(asctime)s] %(levelname)s: %(message)s',
+    level=logging.INFO,
+    datefmt='%H:%M:%S'
+)
+logging.getLogger().setLevel(logging.WARNING)
+
+# File handler — ERROR+ dumped to a .log file after each run
+_SCRIPT_DIR = Path(__file__).resolve().parent
+_LOG_FILE = _SCRIPT_DIR / f"stress_test_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+_file_handler = logging.FileHandler(_LOG_FILE, mode='w')
+_file_handler.setLevel(logging.ERROR)
+_file_handler.setFormatter(logging.Formatter(
+    '[%(asctime)s] %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S'
+))
+logging.getLogger().addHandler(_file_handler)
+
+logger = logging.getLogger(__name__)
+
+# ── Defaults (loaded from defaults.json) ──────────────────────────
+_DEFAULTS_PATH = _SCRIPT_DIR / "defaults.json"
+try:
+    with open(_DEFAULTS_PATH) as _f:
+        _cfg = json.load(_f)
+except (FileNotFoundError, json.JSONDecodeError) as exc:
+    logger.error("Failed to load %s: %s", _DEFAULTS_PATH, exc)
+    sys.exit(1)
+
+DEFAULT_URL         = _cfg["DEFAULT_URL"]
+DEFAULT_WORKERS     = _cfg["DEFAULT_WORKERS"]
+DEFAULT_STRESS_SECS = _cfg["DEFAULT_STRESS_SECS"]
+DEFAULT_REST_SECS   = _cfg["DEFAULT_REST_SECS"]
+DEFAULT_TIMEOUT     = _cfg["DEFAULT_TIMEOUT"]
+REPORT_INTERVAL     = _cfg["REPORT_INTERVAL"]
 
 # ── Globals ───────────────────────────────────────────────────────
 stop_event = threading.Event()
@@ -59,7 +92,8 @@ def _send_request(url: str, timeout: int) -> tuple[int, float]:
             return resp.status, (time.monotonic() - t0) * 1000
     except HTTPError as exc:
         return exc.code, (time.monotonic() - t0) * 1000
-    except (URLError, OSError, TimeoutError):
+    except (URLError, OSError, TimeoutError) as exc:
+        logger.error("Request to %s failed: %s", url, exc)
         return 0, (time.monotonic() - t0) * 1000
 
 
@@ -152,43 +186,30 @@ def _rest_phase(duration: int) -> None:
     print()  # clear the \r line
 
 
-# ── ECS / ASG monitor (best-effort) ──────────────────────────────
+# ── ASG monitor (best-effort) ─────────────────────────────────────
 def _print_scaling_status() -> None:
-    """Try to print current ECS task + ASG instance counts."""
+    """Try to print current ASG instance counts."""
     try:
-        import subprocess
-        import json
-
-        svc = subprocess.run(
-            ["aws", "ecs", "describe-services",
-             "--cluster", "workload-cluster",
-             "--services", "hello-world-service",
-             "--query", "services[0].{desired:desiredCount,running:runningCount}",
-             "--output", "json"],
-            capture_output=True, text=True, timeout=10
-        )
         asg = subprocess.run(
             ["aws", "autoscaling", "describe-auto-scaling-groups",
-             "--auto-scaling-group-names", "ecs-workload-asg",
+             "--auto-scaling-group-names", "workload-asg",
+             "--region", "us-east-2",
              "--query", "AutoScalingGroups[0].{desired:DesiredCapacity,running:Instances[?LifecycleState=='InService']|length(@)}",
              "--output", "json"],
             capture_output=True, text=True, timeout=10
         )
-        svc_info = json.loads(svc.stdout) if svc.returncode == 0 else {}
         asg_info = json.loads(asg.stdout) if asg.returncode == 0 else {}
 
-        print(f"  📊 ECS tasks: {svc_info.get('desired', '?')} desired / "
-              f"{svc_info.get('running', '?')} running  |  "
-              f"ASG instances: {asg_info.get('desired', '?')} desired / "
+        print(f"  📊 ASG instances: {asg_info.get('desired', '?')} desired / "
               f"{asg_info.get('running', '?')} running")
-    except Exception:
-        pass  # non-critical
+    except Exception as exc:
+        logger.error("Failed to fetch scaling status: %s", exc)
 
 
 # ── Main ──────────────────────────────────────────────────────────
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Stress test ECS cluster via ALB")
+        description="Stress test workload ASG via ALB")
     parser.add_argument("--url", default=DEFAULT_URL,
                         help="ALB endpoint URL")
     parser.add_argument("--workers", type=int, default=DEFAULT_WORKERS,
@@ -204,7 +225,7 @@ def main() -> None:
     args = parser.parse_args()
 
     print(f"\n{'─' * 62}")
-    print(f"  ECS Stress Test")
+    print(f"  ASG Stress Test")
     print(f"{'─' * 62}")
     print(f"  URL      : {args.url}")
     print(f"  Workers  : {args.workers}")
@@ -243,6 +264,14 @@ def main() -> None:
         print()
 
     print(">>> Stress test finished.")
+
+    # Report log file
+    if _LOG_FILE.exists() and _LOG_FILE.stat().st_size > 0:
+        print(f"\n⚠  Errors were logged to: {_LOG_FILE}")
+    else:
+        # No errors — clean up the empty log file
+        _LOG_FILE.unlink(missing_ok=True)
+        print("\n✔  No errors logged.")
 
 
 if __name__ == "__main__":

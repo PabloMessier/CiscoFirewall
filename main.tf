@@ -1,4 +1,4 @@
-# AWS Infrastructure — VPC, Subnets, ECS Cluster, Firewall Subnet
+# AWS Infrastructure — VPC, Subnets, Workload ASG, Firewall Subnet
 # The Cisco ASAv firewall is deployed separately via AWS CLI ASG.
 module "aws" {
   source = "./modules/aws"
@@ -10,9 +10,10 @@ module "aws" {
   firewall_subnet_cidr   = var.aws_fw_subnet_cidr
   alb_subnet_a_cidr      = var.aws_alb_subnet_a_cidr
   alb_subnet_b_cidr      = var.aws_alb_subnet_b_cidr
-  ecs_instance_type      = var.ecs_instance_type
-  ecs_asg_min            = var.ecs_asg_min
-  ecs_asg_desired        = var.ecs_asg_desired
-  ecs_asg_max            = var.ecs_asg_max
+  workload_ami_id        = var.workload_ami_id
+  workload_instance_type = var.workload_instance_type
+  workload_asg_min       = var.workload_asg_min
+  workload_asg_desired   = var.workload_asg_desired
+  workload_asg_max       = var.workload_asg_max
   tags                   = var.tags
 }

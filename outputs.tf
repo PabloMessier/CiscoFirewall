@@ -20,12 +20,7 @@ output "aws_firewall_security_group_id" {
   value       = module.aws.firewall_security_group_id
 }
 
-# ECS
-output "ecs_cluster_name" {
-  description = "ECS cluster name"
-  value       = module.aws.ecs_cluster_name
-}
-
+# Workload
 output "alb_dns_name" {
   description = "ALB DNS name — Hello World test page"
   value       = module.aws.alb_dns_name

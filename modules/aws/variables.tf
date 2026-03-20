@@ -33,24 +33,30 @@ variable "alb_subnet_b_cidr" {
   type        = string
 }
 
-# ECS Configuration
-variable "ecs_instance_type" {
-  description = "EC2 instance type for ECS container instances"
+# Workload Configuration
+variable "workload_ami_id" {
+  description = "Custom AMI ID for workload instances (Packer golden image). Empty string falls back to base RHEL."
+  type        = string
+  default     = ""
+}
+
+variable "workload_instance_type" {
+  description = "EC2 instance type for workload RHEL instances"
   type        = string
 }
 
-variable "ecs_asg_min" {
-  description = "Minimum number of ECS instances in ASG"
+variable "workload_asg_min" {
+  description = "Minimum number of workload instances in ASG"
   type        = number
 }
 
-variable "ecs_asg_desired" {
-  description = "Desired number of ECS instances in ASG"
+variable "workload_asg_desired" {
+  description = "Desired number of workload instances in ASG"
   type        = number
 }
 
-variable "ecs_asg_max" {
-  description = "Maximum number of ECS instances in ASG"
+variable "workload_asg_max" {
+  description = "Maximum number of workload instances in ASG"
   type        = number
 }
 
