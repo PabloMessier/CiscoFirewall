@@ -1,32 +1,7 @@
 # ------------------------------------------------------------------
 # Workload — RHEL EC2 instances running nginx via Podman + systemd
+# Golden AMI built by Packer is fully self-contained (no user data).
 # ------------------------------------------------------------------
-
-# Golden AMI built by Packer (Podman + nginx pre-installed).
-# Falls back to base RHEL 10.1 if no custom AMI is provided.
-data "aws_ami" "rhel" {
-  most_recent = true
-  owners      = ["309956199498"] # Red Hat official
-
-  filter {
-    name   = "name"
-    values = ["RHEL-10.1*-x86_64-*"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-
-  filter {
-    name   = "architecture"
-    values = ["x86_64"]
-  }
-}
-
-locals {
-  workload_ami_id = var.workload_ami_id != "" ? var.workload_ami_id : data.aws_ami.rhel.id
-}
 
 # ------------------------------------------------------------------
 # IAM — Instance Role (SSM access only)
@@ -99,6 +74,15 @@ resource "aws_security_group" "workload_instances" {
     security_groups = [aws_security_group.alb.id]
   }
 
+  # HTTP from NLB (TCP passthrough — NLB preserves client source IP)
+  ingress {
+    description = "HTTP via NLB"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   # SSH for debugging
   ingress {
     description = "SSH"
@@ -134,7 +118,7 @@ resource "aws_security_group" "workload_instances" {
 # ------------------------------------------------------------------
 resource "aws_launch_template" "workload" {
   name_prefix   = "workload-rhel-"
-  image_id      = local.workload_ami_id
+  image_id      = var.workload_ami_id
   instance_type = var.workload_instance_type
 
   iam_instance_profile {
@@ -142,8 +126,6 @@ resource "aws_launch_template" "workload" {
   }
 
   vpc_security_group_ids = [aws_security_group.workload_instances.id]
-
-  user_data = base64encode(file("${path.module}/scripts/workload_user_data.sh"))
 
   tag_specifications {
     resource_type = "instance"
@@ -242,33 +224,68 @@ resource "aws_lb_listener" "http" {
 }
 
 # ------------------------------------------------------------------
-# ASG Auto Scaling Policies
+# NLB — Network Load Balancer (TCP passthrough for stress testing)
 # ------------------------------------------------------------------
+resource "aws_lb" "workload_nlb" {
+  name               = "workload-nlb"
+  internal           = false
+  load_balancer_type = "network"
+  subnets            = [aws_subnet.alb_a.id, aws_subnet.alb_b.id]
 
-# Scale based on ALB request count per target
-resource "aws_autoscaling_policy" "requests" {
-  name                   = "workload-request-count-scaling"
-  autoscaling_group_name = aws_autoscaling_group.workload.name
-  policy_type            = "TargetTrackingScaling"
+  tags = merge(var.tags, {
+    Name = "Workload NLB"
+  })
 
-  target_tracking_configuration {
-    target_value = 100
+  depends_on = [aws_internet_gateway.main]
+}
 
-    predefined_metric_specification {
-      predefined_metric_type = "ALBRequestCountPerTarget"
-      resource_label         = "${aws_lb.workload.arn_suffix}/${aws_lb_target_group.workload.arn_suffix}"
-    }
+resource "aws_lb_target_group" "workload_nlb" {
+  name                          = "workload-nlb-tg"
+  port                          = 80
+  protocol                      = "TCP"
+  vpc_id                        = aws_vpc.main.id
+  deregistration_delay          = 30
+  preserve_client_ip            = false  # Prevents asymmetric routing through firewall
+
+  health_check {
+    protocol            = "TCP"
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    interval            = 10
+  }
+
+  tags = var.tags
+}
+
+resource "aws_lb_listener" "nlb_tcp" {
+  load_balancer_arn = aws_lb.workload_nlb.arn
+  port              = 80
+  protocol          = "TCP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.workload_nlb.arn
   }
 }
 
-# Scale based on average CPU utilisation
-resource "aws_autoscaling_policy" "cpu" {
-  name                   = "workload-cpu-scaling"
+resource "aws_autoscaling_attachment" "nlb" {
   autoscaling_group_name = aws_autoscaling_group.workload.name
-  policy_type            = "TargetTrackingScaling"
+  lb_target_group_arn    = aws_lb_target_group.workload_nlb.arn
+}
+
+# ------------------------------------------------------------------
+# ASG Auto Scaling Policies
+# ------------------------------------------------------------------
+
+# Scale based on average CPU utilisation (single policy for ~5 min scale-in)
+resource "aws_autoscaling_policy" "cpu" {
+  name                      = "workload-cpu-scaling"
+  autoscaling_group_name    = aws_autoscaling_group.workload.name
+  policy_type               = "TargetTrackingScaling"
+  estimated_instance_warmup = 120
 
   target_tracking_configuration {
-    target_value = 80
+    target_value = 70
 
     predefined_metric_specification {
       predefined_metric_type = "ASGAverageCPUUtilization"

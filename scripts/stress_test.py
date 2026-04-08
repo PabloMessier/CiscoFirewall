@@ -1,154 +1,118 @@
 #!/usr/bin/env python3
 """
-stress_test.py — Stress test the workload ASG through the ALB.
+stress_test.py — Stress test the workload ASG through the NLB.
 
-Generates high-volume HTTP traffic in cycles:
-  5 minutes of sustained load → 5 minutes rest → repeat
-
-Designed to trigger ASG Auto Scaling (ALB request count + CPU)
-scaling from 2 → 4 → 6 instances.
+Generates HTTP traffic in cycles: stress → rest → repeat.
+Designed to trigger ASG CPU-based auto scaling.
 
 Usage:
   python3 scripts/stress_test.py
   python3 scripts/stress_test.py --workers 200 --stress 300 --rest 300
-  python3 scripts/stress_test.py --cycles 3   # stop after 3 cycles
+  python3 scripts/stress_test.py --cycles 3
 
-Press Ctrl+C to stop gracefully at any time.
+Press Ctrl+C to stop (press twice to force exit).
 """
 
 import argparse
+import json
 import signal
+import subprocess
 import sys
 import threading
 import time
-import subprocess
-import json
-import logging
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError, URLError
 
-# ── Logging ───────────────────────────────────────────────────────
-# Console handler — INFO and WARNING to stdout
-logging.basicConfig(
-    format='[%(asctime)s] %(levelname)s: %(message)s',
-    level=logging.INFO,
-    datefmt='%H:%M:%S'
-)
-logging.getLogger().setLevel(logging.WARNING)
-
-# File handler — ERROR+ dumped to a .log file after each run
+# ── Config ────────────────────────────────────────────────────────
 _SCRIPT_DIR = Path(__file__).resolve().parent
-_LOG_FILE = _SCRIPT_DIR / f"stress_test_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-_file_handler = logging.FileHandler(_LOG_FILE, mode='w')
-_file_handler.setLevel(logging.ERROR)
-_file_handler.setFormatter(logging.Formatter(
-    '[%(asctime)s] %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S'
-))
-logging.getLogger().addHandler(_file_handler)
+_cfg = json.loads((_SCRIPT_DIR / "defaults.json").read_text())
 
-logger = logging.getLogger(__name__)
+DEFAULT_URL     = _cfg["DEFAULT_URL"]
+DEFAULT_WORKERS = _cfg["DEFAULT_WORKERS"]
+DEFAULT_STRESS  = _cfg["DEFAULT_STRESS_SECS"]
+DEFAULT_REST    = _cfg["DEFAULT_REST_SECS"]
+DEFAULT_TIMEOUT = _cfg["DEFAULT_TIMEOUT"]
+REPORT_INTERVAL = _cfg["REPORT_INTERVAL"]
 
-# ── Defaults (loaded from defaults.json) ──────────────────────────
-_DEFAULTS_PATH = _SCRIPT_DIR / "defaults.json"
-try:
-    with open(_DEFAULTS_PATH) as _f:
-        _cfg = json.load(_f)
-except (FileNotFoundError, json.JSONDecodeError) as exc:
-    logger.error("Failed to load %s: %s", _DEFAULTS_PATH, exc)
-    sys.exit(1)
+# ── Signal handling ───────────────────────────────────────────────
+stop = threading.Event()
 
-DEFAULT_URL         = _cfg["DEFAULT_URL"]
-DEFAULT_WORKERS     = _cfg["DEFAULT_WORKERS"]
-DEFAULT_STRESS_SECS = _cfg["DEFAULT_STRESS_SECS"]
-DEFAULT_REST_SECS   = _cfg["DEFAULT_REST_SECS"]
-DEFAULT_TIMEOUT     = _cfg["DEFAULT_TIMEOUT"]
-REPORT_INTERVAL     = _cfg["REPORT_INTERVAL"]
+def _on_signal(sig, frame):
+    print("\n>>> Stopping...")
+    stop.set()
+    signal.signal(signal.SIGINT, lambda s, f: sys.exit(1))
 
-# ── Globals ───────────────────────────────────────────────────────
-stop_event = threading.Event()
-
-
-def _handle_signal(sig, frame):
-    print("\n>>> Ctrl+C — stopping after current phase...")
-    stop_event.set()
-
-
-signal.signal(signal.SIGINT, _handle_signal)
-signal.signal(signal.SIGTERM, _handle_signal)
+signal.signal(signal.SIGINT, _on_signal)
+signal.signal(signal.SIGTERM, _on_signal)
 
 
 # ── HTTP worker ───────────────────────────────────────────────────
-def _send_request(url: str, timeout: int) -> tuple[int, float]:
-    """Send one GET request. Returns (status_code, latency_ms).
-    status_code 0 means connection/timeout error."""
+def _request(url: str, timeout: int) -> tuple[int, float]:
+    """GET url → (status, latency_ms). Status 0 = error."""
     t0 = time.monotonic()
     try:
-        req = Request(url, headers={"Connection": "close"})
-        with urlopen(req, timeout=timeout) as resp:
-            resp.read()  # consume body
-            return resp.status, (time.monotonic() - t0) * 1000
-    except HTTPError as exc:
-        return exc.code, (time.monotonic() - t0) * 1000
-    except (URLError, OSError, TimeoutError) as exc:
-        logger.error("Request to %s failed: %s", url, exc)
+        with urlopen(Request(url, headers={"Connection": "close"}),
+                     timeout=timeout) as r:
+            r.read()
+            return r.status, (time.monotonic() - t0) * 1000
+    except HTTPError as e:
+        return e.code, (time.monotonic() - t0) * 1000
+    except (URLError, OSError, TimeoutError):
         return 0, (time.monotonic() - t0) * 1000
 
 
 # ── Stress phase ──────────────────────────────────────────────────
-def _stress_phase(url: str, workers: int, duration: int,
-                  timeout: int) -> tuple[Counter, list[float]]:
-    """Hammer the URL for *duration* seconds with *workers* threads."""
+def _stress(url: str, workers: int, duration: int,
+            timeout: int) -> tuple[Counter, list[float]]:
     deadline = time.monotonic() + duration
     lock = threading.Lock()
-    status_totals: Counter = Counter()
-    all_latencies: list[float] = []
+    totals: Counter = Counter()
+    latencies: list[float] = []
 
-    def worker():
-        local_status: Counter = Counter()
-        local_lat: list[float] = []
-        while time.monotonic() < deadline and not stop_event.is_set():
-            code, lat = _send_request(url, timeout)
-            local_status[code] += 1
-            local_lat.append(lat)
+    def run():
+        local_s, local_l = Counter(), []
+        while time.monotonic() < deadline and not stop.is_set():
+            code, lat = _request(url, timeout)
+            local_s[code] += 1
+            local_l.append(lat)
         with lock:
-            status_totals.update(local_status)
-            all_latencies.extend(local_lat)
+            totals.update(local_s)
+            latencies.extend(local_l)
 
-    # Launch workers
-    threads = [threading.Thread(target=worker, daemon=True)
+    threads = [threading.Thread(target=run, daemon=True)
                for _ in range(workers)]
     for t in threads:
         t.start()
 
-    # Progress reporting
-    phase_start = time.monotonic()
-    while time.monotonic() < deadline and not stop_event.is_set():
+    start = time.monotonic()
+    while time.monotonic() < deadline and not stop.is_set():
         time.sleep(REPORT_INTERVAL)
-        elapsed = time.monotonic() - phase_start
+        elapsed = time.monotonic() - start
         with lock:
-            total = sum(status_totals.values())
-            rps = total / elapsed if elapsed > 0 else 0
-            ok = status_totals.get(200, 0)
+            total = sum(totals.values())
+            ok = totals.get(200, 0)
             errs = total - ok
-            avg = (sum(all_latencies) / len(all_latencies)
-                   if all_latencies else 0)
-        remaining = max(0, deadline - time.monotonic())
-        print(f"  [{remaining:>4.0f}s left]  {total:>7,} reqs "
-              f"| {rps:>7.1f} req/s | avg {avg:>6.0f}ms "
-              f"| ok={ok:,} err={errs:,}")
+            rps = total / elapsed if elapsed else 0
+            avg = sum(latencies) / len(latencies) if latencies else 0
+        left = max(0, deadline - time.monotonic())
+        print(f"  [{left:>4.0f}s]  {total:>7,} reqs | "
+              f"{rps:>6.0f} req/s | avg {avg:>5.0f}ms | "
+              f"ok={ok:,} err={errs:,}")
 
+    end = time.monotonic() + 10
     for t in threads:
-        t.join(timeout=5)
+        t.join(timeout=max(0.1, end - time.monotonic()))
+        if stop.is_set():
+            break
 
-    return status_totals, all_latencies
+    return totals, latencies
 
 
-# ── Summary printer ───────────────────────────────────────────────
-def _print_summary(cycle: int, statuses: Counter,
-                   latencies: list[float]) -> None:
+# ── Summary ───────────────────────────────────────────────────────
+def _summary(cycle: int, statuses: Counter, latencies: list[float]):
     total = sum(statuses.values())
     if not latencies:
         print(f"  Cycle {cycle}: no requests completed\n")
@@ -156,122 +120,94 @@ def _print_summary(cycle: int, statuses: Counter,
 
     latencies.sort()
     n = len(latencies)
-    avg = sum(latencies) / n
-    p50 = latencies[n // 2]
-    p95 = latencies[int(n * 0.95)]
-    p99 = latencies[int(n * 0.99)]
     ok = statuses.get(200, 0)
 
-    print(f"\n{'═' * 62}")
-    print(f"  Cycle {cycle} Summary")
-    print(f"{'═' * 62}")
-    print(f"  Total requests  : {total:,}")
-    print(f"  Success (200)   : {ok:,}  ({ok / total * 100:.1f}%)")
-    print(f"  Status codes    : {dict(statuses)}")
-    print(f"  Latency (ms)    : avg={avg:.0f}  p50={p50:.0f}"
-          f"  p95={p95:.0f}  p99={p99:.0f}")
-    print(f"  Throughput      : {total / (n and (latencies[-1] / 1000) or 1):.1f} effective req/s")
-    print(f"{'═' * 62}\n")
+    print(f"\n{'=' * 60}")
+    print(f"  Cycle {cycle}")
+    print(f"{'=' * 60}")
+    print(f"  Requests : {total:,}  (ok={ok:,}  err={total - ok:,})")
+    print(f"  Success  : {ok / total * 100:.1f}%")
+    print(f"  Latency  : avg={sum(latencies)/n:.0f}  "
+          f"p50={latencies[n//2]:.0f}  "
+          f"p95={latencies[int(n*0.95)]:.0f}  "
+          f"p99={latencies[int(n*0.99)]:.0f} ms")
+    print(f"{'=' * 60}\n")
 
 
 # ── Rest phase ────────────────────────────────────────────────────
-def _rest_phase(duration: int) -> None:
-    """Sleep with a countdown, checking stop_event."""
+def _rest(duration: int):
     deadline = time.monotonic() + duration
-    while time.monotonic() < deadline and not stop_event.is_set():
-        remaining = deadline - time.monotonic()
-        mins, secs = divmod(int(remaining), 60)
-        print(f"  Resting... {mins}m {secs:02d}s remaining   ", end="\r")
-        time.sleep(min(REPORT_INTERVAL, remaining))
-    print()  # clear the \r line
+    while time.monotonic() < deadline and not stop.is_set():
+        left = deadline - time.monotonic()
+        m, s = divmod(int(left), 60)
+        print(f"  Resting... {m}m {s:02d}s   ", end="\r")
+        time.sleep(min(REPORT_INTERVAL, left))
+    print()
 
 
-# ── ASG monitor (best-effort) ─────────────────────────────────────
-def _print_scaling_status() -> None:
-    """Try to print current ASG instance counts."""
+# ── ASG status ────────────────────────────────────────────────────
+def _asg_status():
     try:
-        asg = subprocess.run(
+        r = subprocess.run(
             ["aws", "autoscaling", "describe-auto-scaling-groups",
              "--auto-scaling-group-names", "workload-asg",
              "--region", "us-east-2",
-             "--query", "AutoScalingGroups[0].{desired:DesiredCapacity,running:Instances[?LifecycleState=='InService']|length(@)}",
+             "--query",
+             "AutoScalingGroups[0].{d:DesiredCapacity,"
+             "r:Instances[?LifecycleState=='InService']|length(@)}",
              "--output", "json"],
-            capture_output=True, text=True, timeout=10
-        )
-        asg_info = json.loads(asg.stdout) if asg.returncode == 0 else {}
-
-        print(f"  📊 ASG instances: {asg_info.get('desired', '?')} desired / "
-              f"{asg_info.get('running', '?')} running")
-    except Exception as exc:
-        logger.error("Failed to fetch scaling status: %s", exc)
+            capture_output=True, text=True, timeout=10)
+        info = json.loads(r.stdout) if r.returncode == 0 else {}
+        print(f"  ASG: {info.get('d','?')} desired / "
+              f"{info.get('r','?')} running")
+    except Exception:
+        print("  ASG: (unavailable)")
 
 
 # ── Main ──────────────────────────────────────────────────────────
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Stress test workload ASG via ALB")
-    parser.add_argument("--url", default=DEFAULT_URL,
-                        help="ALB endpoint URL")
-    parser.add_argument("--workers", type=int, default=DEFAULT_WORKERS,
-                        help="Concurrent request threads")
-    parser.add_argument("--stress", type=int, default=DEFAULT_STRESS_SECS,
-                        help="Stress phase duration in seconds")
-    parser.add_argument("--rest", type=int, default=DEFAULT_REST_SECS,
-                        help="Rest phase duration in seconds")
-    parser.add_argument("--cycles", type=int, default=0,
-                        help="Number of cycles (0 = infinite)")
-    parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT,
-                        help="Per-request timeout in seconds")
-    args = parser.parse_args()
+def main():
+    p = argparse.ArgumentParser(description="Stress test workload ASG")
+    p.add_argument("--url",     default=DEFAULT_URL)
+    p.add_argument("--workers", type=int, default=DEFAULT_WORKERS)
+    p.add_argument("--stress",  type=int, default=DEFAULT_STRESS)
+    p.add_argument("--rest",    type=int, default=DEFAULT_REST)
+    p.add_argument("--cycles",  type=int, default=0, help="0 = infinite")
+    p.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT)
+    a = p.parse_args()
 
-    print(f"\n{'─' * 62}")
+    print(f"\n{'-' * 60}")
     print(f"  ASG Stress Test")
-    print(f"{'─' * 62}")
-    print(f"  URL      : {args.url}")
-    print(f"  Workers  : {args.workers}")
-    print(f"  Cycle    : {args.stress}s stress / {args.rest}s rest")
-    print(f"  Cycles   : {'∞' if args.cycles == 0 else args.cycles}")
-    print(f"{'─' * 62}\n")
-
-    _print_scaling_status()
+    print(f"{'-' * 60}")
+    print(f"  URL     : {a.url}")
+    print(f"  Workers : {a.workers}")
+    print(f"  Cycle   : {a.stress}s stress / {a.rest}s rest")
+    print(f"  Cycles  : {'inf' if a.cycles == 0 else a.cycles}")
+    print(f"{'-' * 60}\n")
+    _asg_status()
     print()
 
     cycle = 0
-    while not stop_event.is_set():
+    while not stop.is_set():
         cycle += 1
-        if args.cycles > 0 and cycle > args.cycles:
+        if a.cycles and cycle > a.cycles:
             break
 
-        ts = datetime.now().strftime("%H:%M:%S")
-        print(f">>> Cycle {cycle} — STRESS ({args.stress}s) "
-              f"started at {ts}")
+        print(f">>> Cycle {cycle} — STRESS ({a.stress}s) "
+              f"@ {datetime.now():%H:%M:%S}")
+        statuses, lats = _stress(a.url, a.workers, a.stress, a.timeout)
+        _summary(cycle, statuses, lats)
+        _asg_status()
 
-        statuses, latencies = _stress_phase(
-            args.url, args.workers, args.stress, args.timeout)
-        _print_summary(cycle, statuses, latencies)
-        _print_scaling_status()
-
-        if stop_event.is_set():
-            break
-        if args.cycles > 0 and cycle >= args.cycles:
+        if stop.is_set() or (a.cycles and cycle >= a.cycles):
             break
 
-        ts = datetime.now().strftime("%H:%M:%S")
-        print(f">>> Cycle {cycle} — REST ({args.rest}s) "
-              f"started at {ts}")
-        _rest_phase(args.rest)
-        _print_scaling_status()
+        print(f">>> Cycle {cycle} — REST ({a.rest}s) "
+              f"@ {datetime.now():%H:%M:%S}")
+        _rest(a.rest)
+        _asg_status()
         print()
 
-    print(">>> Stress test finished.")
-
-    # Report log file
-    if _LOG_FILE.exists() and _LOG_FILE.stat().st_size > 0:
-        print(f"\n⚠  Errors were logged to: {_LOG_FILE}")
-    else:
-        # No errors — clean up the empty log file
-        _LOG_FILE.unlink(missing_ok=True)
-        print("\n✔  No errors logged.")
+    print(">>> Done.")
 
 
 if __name__ == "__main__":

@@ -25,3 +25,8 @@ output "alb_dns_name" {
   description = "ALB DNS name — Hello World test page"
   value       = module.aws.alb_dns_name
 }
+
+output "nlb_dns_name" {
+  description = "NLB DNS name — stress testing endpoint"
+  value       = module.aws.nlb_dns_name
+}

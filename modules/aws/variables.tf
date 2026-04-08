@@ -35,9 +35,8 @@ variable "alb_subnet_b_cidr" {
 
 # Workload Configuration
 variable "workload_ami_id" {
-  description = "Custom AMI ID for workload instances (Packer golden image). Empty string falls back to base RHEL."
+  description = "Packer-built golden AMI ID for workload instances (required — run packer build first)."
   type        = string
-  default     = ""
 }
 
 variable "workload_instance_type" {
