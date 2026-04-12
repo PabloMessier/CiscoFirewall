@@ -42,7 +42,3 @@ output "alb_arn" {
   value       = aws_lb.workload.arn
 }
 
-output "nlb_dns_name" {
-  description = "NLB DNS name for stress testing"
-  value       = aws_lb.workload_nlb.dns_name
-}

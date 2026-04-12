@@ -8,16 +8,6 @@ variable "vpc_cidr" {
   type        = string
 }
 
-variable "workload_subnet_cidr" {
-  description = "CIDR block for workload subnet A"
-  type        = string
-}
-
-variable "workload_subnet_b_cidr" {
-  description = "CIDR block for workload subnet B (second AZ for ALB)"
-  type        = string
-}
-
 variable "firewall_subnet_cidr" {
   description = "CIDR block for firewall subnet"
   type        = string
@@ -33,12 +23,22 @@ variable "alb_subnet_b_cidr" {
   type        = string
 }
 
-# Workload Configuration
-variable "workload_ami_id" {
-  description = "Packer-built golden AMI ID for workload instances (required — run packer build first)."
+variable "workload_subnet_a_cidr" {
+  description = "CIDR block for workload subnet A"
   type        = string
 }
 
+variable "workload_subnet_b_cidr" {
+  description = "CIDR block for workload subnet B (second AZ for ALB)"
+  type        = string
+}
+
+variable "inside_eni_subnet_cidr" {
+  description = "CIDR block for inside ENI subnet (second AZ for ASAv)"
+  type        = string
+}
+
+# Workload Configuration
 variable "workload_instance_type" {
   description = "EC2 instance type for workload RHEL instances"
   type        = string

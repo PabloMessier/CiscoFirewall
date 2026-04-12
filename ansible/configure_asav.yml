@@ -22,18 +22,18 @@
   gather_facts: false
 
   vars:
-    inside_network: "10.0.1.0"       # Workload subnet A CIDR
-    inside_mask: "255.255.255.0"
-    inside_gateway: "10.0.1.1"        # VPC gateway for inside subnet
-    inside_network_b: "10.0.3.0"     # Workload subnet B CIDR
-    inside_mask_b: "255.255.255.0"
-    alb_subnet_a: "10.0.4.0"         # ALB subnet A
-    alb_subnet_b: "10.0.5.0"         # ALB subnet B
-    alb_mask: "255.255.255.0"
-    alb_server_ip: ""                # ALB private IP (set after deployment)
-    firewall_vip: ""                 # Secondary IP on outside ENI (NAT VIP, set after deployment)
+    inside_gateway: "10.0.2.1"        # VPC gateway for inside ENI subnet (10.0.2.0/28)
+    workload_subnet_a: "10.0.5.0"    # Workload subnet A
+    workload_mask_a: "255.255.255.192"
+    workload_subnet_b: "10.0.6.0"    # Workload subnet B
+    workload_mask_b: "255.255.255.192"
+    alb_subnet_a: "10.0.3.0"         # ALB subnet A
+    alb_subnet_b: "10.0.4.0"         # ALB subnet B
+    alb_mask: "255.255.255.224"       # /27
+    alb_server_ip: "10.0.3.17"       # ALB private IP
+    firewall_vip: "10.0.1.10"        # Secondary IP on outside ENI (NAT VIP)
     vpc_cidr: "10.0.0.0"
-    vpc_mask: "255.255.0.0"
+    vpc_mask: "255.255.240.0"         # /20
 
   tasks:
     # ── Interface Configuration ─────────────────────────────────
@@ -66,8 +66,8 @@
     - name: Create inside-to-outside ACL (allow outbound)
       cisco.asa.asa_config:
         lines:
-          - access-list INSIDE_OUT extended permit ip {{ inside_network }} {{ inside_mask }} any
-          - access-list INSIDE_OUT extended permit ip {{ inside_network_b }} {{ inside_mask_b }} any
+          - access-list INSIDE_OUT extended permit ip {{ workload_subnet_a }} {{ workload_mask_a }} any
+          - access-list INSIDE_OUT extended permit ip {{ workload_subnet_b }} {{ workload_mask_b }} any
 
     - name: Apply ACLs to interfaces
       cisco.asa.asa_config:
@@ -75,20 +75,32 @@
           - access-group OUTSIDE_IN in interface outside
           - access-group INSIDE_OUT in interface inside
 
-    # ── NAT — PAT for outbound workload traffic ─────────────────
-    - name: Configure PAT (outbound NAT)
+    # ── NAT — Twice NAT for outbound workload traffic ────────────
+    - name: Remove legacy simple PAT rule (replaced by twice NAT)
       cisco.asa.asa_config:
         lines:
-          - nat (inside,outside) source dynamic any interface
+          - no nat (inside,outside) source dynamic any interface
+      ignore_errors: true
+
+    - name: Create ANY_NET object for twice NAT
+      cisco.asa.asa_config:
+        parents: object network ANY_NET
+        lines:
+          - subnet 0.0.0.0 0.0.0.0
+
+    - name: Configure twice NAT (outbound)
+      cisco.asa.asa_config:
+        lines:
+          - nat (inside,outside) source dynamic any interface destination static ANY_NET ANY_NET
 
     # ── Static Routes ───────────────────────────────────────────
-    # 10.0.1.0/24 is the connected subnet (inside interface) — no route needed.
-    # 10.0.3.0/24 (workload subnet B) routes via the VPC gateway at 10.0.1.1.
-    # 10.0.4.0/24 and 10.0.5.0/24 (ALB subnets) also route via the inside gateway.
+    # Inside ENI is in 10.0.2.0/28 (connected). All other internal subnets
+    # need routes via the VPC gateway at 10.0.2.1.
     - name: Configure static routes
       cisco.asa.asa_config:
         lines:
-          - route inside {{ inside_network_b }} {{ inside_mask_b }} {{ inside_gateway }}
+          - route inside {{ workload_subnet_a }} {{ workload_mask_a }} {{ inside_gateway }}
+          - route inside {{ workload_subnet_b }} {{ workload_mask_b }} {{ inside_gateway }}
           - route inside {{ alb_subnet_a }} {{ alb_mask }} {{ inside_gateway }}
           - route inside {{ alb_subnet_b }} {{ alb_mask }} {{ inside_gateway }}
 
@@ -113,15 +125,23 @@
     # treated as "self-addressed".  Twice NAT translates both source
     # (PAT to inside IP) and destination (VIP → ALB) for symmetric
     # return traffic.
-    - name: Create NAT objects for inbound HTTP
+    - name: Create ALB_SERVER object
       cisco.asa.asa_config:
+        parents: object network ALB_SERVER
         lines:
-          - object network ALB_SERVER
-          -   host {{ alb_server_ip }}
-          - object network FIREWALL_VIP
-          -   host {{ firewall_vip }}
-          - object service HTTP_PORT
-          -   service tcp destination eq 80
+          - host {{ alb_server_ip }}
+
+    - name: Create FIREWALL_VIP object
+      cisco.asa.asa_config:
+        parents: object network FIREWALL_VIP
+        lines:
+          - host {{ firewall_vip }}
+
+    - name: Create HTTP_PORT service object
+      cisco.asa.asa_config:
+        parents: object service HTTP_PORT
+        lines:
+          - service tcp destination eq 80
 
     - name: Configure twice NAT for inbound HTTP
       cisco.asa.asa_config:

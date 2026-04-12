@@ -11,9 +11,9 @@ resource "aws_vpc" "main" {
 # Workload subnets (two AZs required for ALB)
 resource "aws_subnet" "workload" {
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = var.workload_subnet_cidr
+  cidr_block              = var.workload_subnet_a_cidr
   availability_zone       = "${var.region}a"
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false
 
   tags = merge(var.tags, {
     Name = "AWS Workload Subnet A"
@@ -24,7 +24,7 @@ resource "aws_subnet" "workload_b" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.workload_subnet_b_cidr
   availability_zone       = "${var.region}b"
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false
 
   tags = merge(var.tags, {
     Name = "AWS Workload Subnet B"
@@ -75,3 +75,13 @@ resource "aws_internet_gateway" "main" {
 }
 
 # Route tables and security groups defined in firewall.tf and workload.tf
+# Inside ENI resource
+resource "aws_subnet" "inside_eni" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = var.inside_eni_subnet_cidr
+  availability_zone = "${var.region}a"  # Must match firewall subnet AZ for ENI attachment
+
+  tags = merge(var.tags, {
+    Name = "AWS Inside ENI Subnet"
+  })
+}

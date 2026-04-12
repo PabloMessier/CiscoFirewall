@@ -1,0 +1,284 @@
+Script started on Sun Apr 12 13:43:36 2026
+Command: ------------------------------------------------------------
+  ASG Stress Test (Go)
+------------------------------------------------------------
+  URL     : http://workload-alb-157207967.us-east-2.elb.amazonaws.com/cpu.php
+  Workers : 1000
+  Cycle   : 3600s stress / 0s rest
+  Cycles  : inf
+  Pool    : Go net/http (keep-alive, 500 max idle conns)
+------------------------------------------------------------
+
+  Preflight check: http://workload-alb-157207967.us-east-2.elb.amazonaws.com/cpu.php ... OK (HTTP 200, 205ms)
+
+  ASG (workload-asg): 2 desired / 2 running
+
+>>> Cycle 1 — STRESS (3600s) @ 13:33:56
+  [3595s]     4767 reqs |    953 req/s | avg   927ms | ok=3976 err=791
+  [3590s]     9999 reqs |   1000 req/s | avg   942ms | ok=8233 err=1766
+  [3585s]    15302 reqs |   1020 req/s | avg   944ms | ok=12550 err=2752
+  [3580s]    20698 reqs |   1035 req/s | avg   939ms | ok=16863 err=3835
+  [3575s]    26021 reqs |   1041 req/s | avg   939ms | ok=21186 err=4835
+  [3570s]    31477 reqs |   1049 req/s | avg   935ms | ok=25508 err=5969
+  [3565s]    36893 reqs |   1054 req/s | avg   933ms | ok=29836 err=7057
+  [3560s]    42358 reqs |   1059 req/s | avg   931ms | ok=34153 err=8205
+  [3555s]    47813 reqs |   1063 req/s | avg   930ms | ok=38483 err=9330
+  [3550s]    53347 reqs |   1067 req/s | avg   927ms | ok=42808 err=10539
+  [3545s]    58815 reqs |   1069 req/s | avg   925ms | ok=47089 err=11726
+  [3540s]    64345 reqs |   1072 req/s | avg   924ms | ok=51414 err=12931
+  [3535s]    69923 reqs |   1076 req/s | avg   921ms | ok=55710 err=14213
+  [3530s]    75578 reqs |   1080 req/s | avg   919ms | ok=60016 err=15562
+  [3525s]    81168 reqs |   1082 req/s | avg   917ms | ok=64334 err=16834
+  [3520s]    86811 reqs |   1085 req/s | avg   915ms | ok=68654 err=18157
+  [3515s]    92407 reqs |   1087 req/s | avg   914ms | ok=72973 err=19434
+  [3510s]    98105 reqs |   1090 req/s | avg   912ms | ok=77254 err=20851
+  [3505s]   103762 reqs |   1092 req/s | avg   910ms | ok=81577 err=22185
+  [3500s]   109422 reqs |   1094 req/s | avg   909ms | ok=85900 err=23522
+  [3495s]   115083 reqs |   1096 req/s | avg   908ms | ok=90226 err=24857
+  [3490s]   120761 reqs |   1098 req/s | avg   906ms | ok=94551 err=26210
+  [3485s]   126449 reqs |   1100 req/s | avg   905ms | ok=98875 err=27574
+  [3480s]   132116 reqs |   1101 req/s | avg   904ms | ok=103198 err=28918
+  [3475s]   137801 reqs |   1102 req/s | avg   903ms | ok=107517 err=30284
+  [3470s]   143429 reqs |   1103 req/s | avg   902ms | ok=111832 err=31597
+  [3465s]   149145 reqs |   1105 req/s | avg   902ms | ok=116153 err=32992
+  [3460s]   154805 reqs |   1106 req/s | avg   901ms | ok=120468 err=34337
+  [3455s]   160519 reqs |   1107 req/s | avg   900ms | ok=124799 err=35720
+  [3450s]   166213 reqs |   1108 req/s | avg   899ms | ok=129118 err=37095
+  [3445s]   171883 reqs |   1109 req/s | avg   898ms | ok=133447 err=38436
+  [3440s]   177526 reqs |   1110 req/s | avg   898ms | ok=137773 err=39753
+  [3435s]   183155 reqs |   1110 req/s | avg   898ms | ok=142103 err=41052
+  [3430s]   188736 reqs |   1110 req/s | avg   898ms | ok=146432 err=42304
+  [3425s]   194378 reqs |   1111 req/s | avg   897ms | ok=150755 err=43623
+  [3420s]   200043 reqs |   1111 req/s | avg   897ms | ok=155082 err=44961
+  [3415s]   205674 reqs |   1112 req/s | avg   897ms | ok=159410 err=46264
+  [3410s]   211288 reqs |   1112 req/s | avg   896ms | ok=163729 err=47559
+  [3405s]   216927 reqs |   1112 req/s | avg   896ms | ok=168058 err=48869
+  [3400s]   222474 reqs |   1112 req/s | avg   896ms | ok=172394 err=50080
+  [3395s]   228081 reqs |   1113 req/s | avg   896ms | ok=176718 err=51363
+  [3390s]   233729 reqs |   1113 req/s | avg   896ms | ok=181050 err=52679
+  [3385s]   239385 reqs |   1113 req/s | avg   896ms | ok=185378 err=54007
+  [3380s]   245085 reqs |   1114 req/s | avg   895ms | ok=189710 err=55375
+  [3375s]   250799 reqs |   1115 req/s | avg   895ms | ok=194037 err=56762
+  [3370s]   256458 reqs |   1115 req/s | avg   895ms | ok=198362 err=58096
+  [3365s]   262064 reqs |   1115 req/s | avg   895ms | ok=202688 err=59376
+  [3360s]   267674 reqs |   1115 req/s | avg   894ms | ok=207002 err=60672
+  [3355s]   273421 reqs |   1116 req/s | avg   894ms | ok=211321 err=62100
+  [3350s]   279082 reqs |   1116 req/s | avg   894ms | ok=215638 err=63444
+  [3345s]   284790 reqs |   1117 req/s | avg   894ms | ok=219956 err=64834
+  [3340s]   290550 reqs |   1117 req/s | avg   893ms | ok=224269 err=66281
+  [3335s]   296231 reqs |   1118 req/s | avg   893ms | ok=228589 err=67642
+  [3330s]   302001 reqs |   1119 req/s | avg   892ms | ok=232910 err=69091
+  [3325s]   307765 reqs |   1119 req/s | avg   892ms | ok=237241 err=70524
+  [3320s]   313511 reqs |   1120 req/s | avg   891ms | ok=241565 err=71946
+  [3315s]   319149 reqs |   1120 req/s | avg   891ms | ok=245894 err=73255
+  [3310s]   324847 reqs |   1120 req/s | avg   891ms | ok=250217 err=74630
+  [3305s]   330546 reqs |   1120 req/s | avg   891ms | ok=254552 err=75994
+  [3300s]   336270 reqs |   1121 req/s | avg   890ms | ok=258882 err=77388
+  [3295s]   341933 reqs |   1121 req/s | avg   890ms | ok=263206 err=78727
+  [3290s]   347637 reqs |   1121 req/s | avg   890ms | ok=267535 err=80102
+  [3285s]   353317 reqs |   1122 req/s | avg   890ms | ok=271853 err=81464
+  [3280s]   359003 reqs |   1122 req/s | avg   890ms | ok=276181 err=82822
+  [3275s]   364723 reqs |   1122 req/s | avg   890ms | ok=280511 err=84212
+  [3270s]   370379 reqs |   1122 req/s | avg   890ms | ok=284840 err=85539
+  [3265s]   377197 reqs |   1126 req/s | avg   887ms | ok=290677 err=86520
+  [3260s]   385271 reqs |   1133 req/s | avg   881ms | ok=298729 err=86542
+  [3255s]   389327 reqs |   1128 req/s | avg   879ms | ok=302738 err=86589
+  [3250s]   390518 reqs |   1116 req/s | avg   883ms | ok=303867 err=86651
+  [3245s]   392769 reqs |   1106 req/s | avg   895ms | ok=305609 err=87160
+  [3240s]   394000 reqs |   1094 req/s | avg   900ms | ok=306651 err=87349
+  [3235s]   395741 reqs |   1084 req/s | avg   912ms | ok=307777 err=87964
+  [3230s]   396863 reqs |   1073 req/s | avg   920ms | ok=308584 err=88279
+  [3225s]   398206 reqs |   1062 req/s | avg   932ms | ok=309469 err=88737
+  [3220s]   399321 reqs |   1051 req/s | avg   940ms | ok=310305 err=89016
+  [3215s]   400552 reqs |   1040 req/s | avg   950ms | ok=311181 err=89371
+  [3210s]   401704 reqs |   1030 req/s | avg   959ms | ok=312008 err=89696
+  [3205s]   402886 reqs |   1020 req/s | avg   969ms | ok=312846 err=90040
+  [3200s]   404067 reqs |   1010 req/s | avg   979ms | ok=313690 err=90377
+  [3195s]   405208 reqs |   1001 req/s | avg   988ms | ok=314501 err=90707
+  [3190s]   406421 reqs |    991 req/s | avg   998ms | ok=315348 err=91073
+  [3185s]   407542 reqs |    982 req/s | avg  1007ms | ok=316140 err=91402
+  [3180s]   408762 reqs |    973 req/s | avg  1016ms | ok=316999 err=91763
+  [3175s]   409899 reqs |    964 req/s | avg  1026ms | ok=317813 err=92086
+  [3170s]   411446 reqs |    957 req/s | avg  1034ms | ok=318993 err=92453
+  [3165s]   413230 reqs |    950 req/s | avg  1042ms | ok=320414 err=92816
+  [3160s]   414858 reqs |    943 req/s | avg  1049ms | ok=321684 err=93174
+  [3155s]   416554 reqs |    936 req/s | avg  1057ms | ok=322942 err=93612
+  [3150s]   417978 reqs |    929 req/s | avg  1065ms | ok=323950 err=94028
+  [3145s]   419906 reqs |    923 req/s | avg  1072ms | ok=325410 err=94496
+  [3140s]   421919 reqs |    917 req/s | avg  1079ms | ok=326977 err=94942
+  [3135s]   423938 reqs |    912 req/s | avg  1085ms | ok=328522 err=95416
+  [3130s]   425856 reqs |    906 req/s | avg  1092ms | ok=329987 err=95869
+  [3125s]   427884 reqs |    901 req/s | avg  1099ms | ok=331521 err=96363
+  [3120s]   429854 reqs |    896 req/s | avg  1105ms | ok=333037 err=96817
+  [3115s]   432517 reqs |    892 req/s | avg  1110ms | ok=335204 err=97313
+  [3110s]   435441 reqs |    889 req/s | avg  1114ms | ok=337678 err=97763
+  [3105s]   437845 reqs |    885 req/s | avg  1120ms | ok=339621 err=98224
+  [3100s]   439913 reqs |    880 req/s | avg  1127ms | ok=341199 err=98714
+  [3095s]   441853 reqs |    875 req/s | avg  1133ms | ok=342746 err=99107
+  [3090s]   443715 reqs |    870 req/s | avg  1140ms | ok=344259 err=99456
+  [3085s]   445518 reqs |    865 req/s | avg  1146ms | ok=345736 err=99782
+  [3080s]   447929 reqs |    861 req/s | avg  1151ms | ok=347815 err=100114
+  [3075s]   451080 reqs |    859 req/s | avg  1155ms | ok=350611 err=100469
+  [3070s]   453074 reqs |    855 req/s | avg  1160ms | ok=352309 err=100765
+  [3065s]   455178 reqs |    851 req/s | avg  1167ms | ok=353970 err=101208
+  [3060s]   456679 reqs |    846 req/s | avg  1173ms | ok=355246 err=101433
+  [3055s]   458353 reqs |    841 req/s | avg  1180ms | ok=356586 err=101767
+  [3050s]   459763 reqs |    836 req/s | avg  1186ms | ok=357732 err=102031
+  [3045s]   461371 reqs |    831 req/s | avg  1193ms | ok=358999 err=102372
+^C
+>>> Stopping...
+
+============================================================
+  Cycle 1
+============================================================
+  Requests : 462600  (ok=359684  err=102916)
+  Success  : 77.8%
+  Latency  : avg=1211  p50=1008  p95=2661  p99=10000 ms
+  Range    : min=76  max=10012  stddev=1894 ms
+============================================================
+
+  ASG (workload-asg): 6 desired / 6 running
+>>> Done.
+Script: ------------------------------------------------------------
+  ASG Stress Test (Go)
+------------------------------------------------------------
+  URL     : http://workload-alb-157207967.us-east-2.elb.amazonaws.com/cpu.php
+  Workers : 1000
+  Cycle   : 3600s stress / 0s rest
+  Cycles  : inf
+  Pool    : Go net/http (keep-alive, 500 max idle conns)
+------------------------------------------------------------
+
+  Preflight check: http://workload-alb-157207967.us-east-2.elb.amazonaws.com/cpu.php ... OK (HTTP 200, 205ms)
+
+  ASG (workload-asg): 2 desired / 2 running
+
+>>> Cycle 1 — STRESS (3600s) @ 13:33:56
+  [3595s]     4767 reqs |    953 req/s | avg   927ms | ok=3976 err=791
+  [3590s]     9999 reqs |   1000 req/s | avg   942ms | ok=8233 err=1766
+  [3585s]    15302 reqs |   1020 req/s | avg   944ms | ok=12550 err=2752
+  [3580s]    20698 reqs |   1035 req/s | avg   939ms | ok=16863 err=3835
+  [3575s]    26021 reqs |   1041 req/s | avg   939ms | ok=21186 err=4835
+  [3570s]    31477 reqs |   1049 req/s | avg   935ms | ok=25508 err=5969
+  [3565s]    36893 reqs |   1054 req/s | avg   933ms | ok=29836 err=7057
+  [3560s]    42358 reqs |   1059 req/s | avg   931ms | ok=34153 err=8205
+  [3555s]    47813 reqs |   1063 req/s | avg   930ms | ok=38483 err=9330
+  [3550s]    53347 reqs |   1067 req/s | avg   927ms | ok=42808 err=10539
+  [3545s]    58815 reqs |   1069 req/s | avg   925ms | ok=47089 err=11726
+  [3540s]    64345 reqs |   1072 req/s | avg   924ms | ok=51414 err=12931
+  [3535s]    69923 reqs |   1076 req/s | avg   921ms | ok=55710 err=14213
+  [3530s]    75578 reqs |   1080 req/s | avg   919ms | ok=60016 err=15562
+  [3525s]    81168 reqs |   1082 req/s | avg   917ms | ok=64334 err=16834
+  [3520s]    86811 reqs |   1085 req/s | avg   915ms | ok=68654 err=18157
+  [3515s]    92407 reqs |   1087 req/s | avg   914ms | ok=72973 err=19434
+  [3510s]    98105 reqs |   1090 req/s | avg   912ms | ok=77254 err=20851
+  [3505s]   103762 reqs |   1092 req/s | avg   910ms | ok=81577 err=22185
+  [3500s]   109422 reqs |   1094 req/s | avg   909ms | ok=85900 err=23522
+  [3495s]   115083 reqs |   1096 req/s | avg   908ms | ok=90226 err=24857
+  [3490s]   120761 reqs |   1098 req/s | avg   906ms | ok=94551 err=26210
+  [3485s]   126449 reqs |   1100 req/s | avg   905ms | ok=98875 err=27574
+  [3480s]   132116 reqs |   1101 req/s | avg   904ms | ok=103198 err=28918
+  [3475s]   137801 reqs |   1102 req/s | avg   903ms | ok=107517 err=30284
+  [3470s]   143429 reqs |   1103 req/s | avg   902ms | ok=111832 err=31597
+  [3465s]   149145 reqs |   1105 req/s | avg   902ms | ok=116153 err=32992
+  [3460s]   154805 reqs |   1106 req/s | avg   901ms | ok=120468 err=34337
+  [3455s]   160519 reqs |   1107 req/s | avg   900ms | ok=124799 err=35720
+  [3450s]   166213 reqs |   1108 req/s | avg   899ms | ok=129118 err=37095
+  [3445s]   171883 reqs |   1109 req/s | avg   898ms | ok=133447 err=38436
+  [3440s]   177526 reqs |   1110 req/s | avg   898ms | ok=137773 err=39753
+  [3435s]   183155 reqs |   1110 req/s | avg   898ms | ok=142103 err=41052
+  [3430s]   188736 reqs |   1110 req/s | avg   898ms | ok=146432 err=42304
+  [3425s]   194378 reqs |   1111 req/s | avg   897ms | ok=150755 err=43623
+  [3420s]   200043 reqs |   1111 req/s | avg   897ms | ok=155082 err=44961
+  [3415s]   205674 reqs |   1112 req/s | avg   897ms | ok=159410 err=46264
+  [3410s]   211288 reqs |   1112 req/s | avg   896ms | ok=163729 err=47559
+  [3405s]   216927 reqs |   1112 req/s | avg   896ms | ok=168058 err=48869
+  [3400s]   222474 reqs |   1112 req/s | avg   896ms | ok=172394 err=50080
+  [3395s]   228081 reqs |   1113 req/s | avg   896ms | ok=176718 err=51363
+  [3390s]   233729 reqs |   1113 req/s | avg   896ms | ok=181050 err=52679
+  [3385s]   239385 reqs |   1113 req/s | avg   896ms | ok=185378 err=54007
+  [3380s]   245085 reqs |   1114 req/s | avg   895ms | ok=189710 err=55375
+  [3375s]   250799 reqs |   1115 req/s | avg   895ms | ok=194037 err=56762
+  [3370s]   256458 reqs |   1115 req/s | avg   895ms | ok=198362 err=58096
+  [3365s]   262064 reqs |   1115 req/s | avg   895ms | ok=202688 err=59376
+  [3360s]   267674 reqs |   1115 req/s | avg   894ms | ok=207002 err=60672
+  [3355s]   273421 reqs |   1116 req/s | avg   894ms | ok=211321 err=62100
+  [3350s]   279082 reqs |   1116 req/s | avg   894ms | ok=215638 err=63444
+  [3345s]   284790 reqs |   1117 req/s | avg   894ms | ok=219956 err=64834
+  [3340s]   290550 reqs |   1117 req/s | avg   893ms | ok=224269 err=66281
+  [3335s]   296231 reqs |   1118 req/s | avg   893ms | ok=228589 err=67642
+  [3330s]   302001 reqs |   1119 req/s | avg   892ms | ok=232910 err=69091
+  [3325s]   307765 reqs |   1119 req/s | avg   892ms | ok=237241 err=70524
+  [3320s]   313511 reqs |   1120 req/s | avg   891ms | ok=241565 err=71946
+  [3315s]   319149 reqs |   1120 req/s | avg   891ms | ok=245894 err=73255
+  [3310s]   324847 reqs |   1120 req/s | avg   891ms | ok=250217 err=74630
+  [3305s]   330546 reqs |   1120 req/s | avg   891ms | ok=254552 err=75994
+  [3300s]   336270 reqs |   1121 req/s | avg   890ms | ok=258882 err=77388
+  [3295s]   341933 reqs |   1121 req/s | avg   890ms | ok=263206 err=78727
+  [3290s]   347637 reqs |   1121 req/s | avg   890ms | ok=267535 err=80102
+  [3285s]   353317 reqs |   1122 req/s | avg   890ms | ok=271853 err=81464
+  [3280s]   359003 reqs |   1122 req/s | avg   890ms | ok=276181 err=82822
+  [3275s]   364723 reqs |   1122 req/s | avg   890ms | ok=280511 err=84212
+  [3270s]   370379 reqs |   1122 req/s | avg   890ms | ok=284840 err=85539
+  [3265s]   377197 reqs |   1126 req/s | avg   887ms | ok=290677 err=86520
+  [3260s]   385271 reqs |   1133 req/s | avg   881ms | ok=298729 err=86542
+  [3255s]   389327 reqs |   1128 req/s | avg   879ms | ok=302738 err=86589
+  [3250s]   390518 reqs |   1116 req/s | avg   883ms | ok=303867 err=86651
+  [3245s]   392769 reqs |   1106 req/s | avg   895ms | ok=305609 err=87160
+  [3240s]   394000 reqs |   1094 req/s | avg   900ms | ok=306651 err=87349
+  [3235s]   395741 reqs |   1084 req/s | avg   912ms | ok=307777 err=87964
+  [3230s]   396863 reqs |   1073 req/s | avg   920ms | ok=308584 err=88279
+  [3225s]   398206 reqs |   1062 req/s | avg   932ms | ok=309469 err=88737
+  [3220s]   399321 reqs |   1051 req/s | avg   940ms | ok=310305 err=89016
+  [3215s]   400552 reqs |   1040 req/s | avg   950ms | ok=311181 err=89371
+  [3210s]   401704 reqs |   1030 req/s | avg   959ms | ok=312008 err=89696
+  [3205s]   402886 reqs |   1020 req/s | avg   969ms | ok=312846 err=90040
+  [3200s]   404067 reqs |   1010 req/s | avg   979ms | ok=313690 err=90377
+  [3195s]   405208 reqs |   1001 req/s | avg   988ms | ok=314501 err=90707
+  [3190s]   406421 reqs |    991 req/s | avg   998ms | ok=315348 err=91073
+  [3185s]   407542 reqs |    982 req/s | avg  1007ms | ok=316140 err=91402
+  [3180s]   408762 reqs |    973 req/s | avg  1016ms | ok=316999 err=91763
+  [3175s]   409899 reqs |    964 req/s | avg  1026ms | ok=317813 err=92086
+  [3170s]   411446 reqs |    957 req/s | avg  1034ms | ok=318993 err=92453
+  [3165s]   413230 reqs |    950 req/s | avg  1042ms | ok=320414 err=92816
+  [3160s]   414858 reqs |    943 req/s | avg  1049ms | ok=321684 err=93174
+  [3155s]   416554 reqs |    936 req/s | avg  1057ms | ok=322942 err=93612
+  [3150s]   417978 reqs |    929 req/s | avg  1065ms | ok=323950 err=94028
+  [3145s]   419906 reqs |    923 req/s | avg  1072ms | ok=325410 err=94496
+  [3140s]   421919 reqs |    917 req/s | avg  1079ms | ok=326977 err=94942
+  [3135s]   423938 reqs |    912 req/s | avg  1085ms | ok=328522 err=95416
+  [3130s]   425856 reqs |    906 req/s | avg  1092ms | ok=329987 err=95869
+  [3125s]   427884 reqs |    901 req/s | avg  1099ms | ok=331521 err=96363
+  [3120s]   429854 reqs |    896 req/s | avg  1105ms | ok=333037 err=96817
+  [3115s]   432517 reqs |    892 req/s | avg  1110ms | ok=335204 err=97313
+  [3110s]   435441 reqs |    889 req/s | avg  1114ms | ok=337678 err=97763
+  [3105s]   437845 reqs |    885 req/s | avg  1120ms | ok=339621 err=98224
+  [3100s]   439913 reqs |    880 req/s | avg  1127ms | ok=341199 err=98714
+  [3095s]   441853 reqs |    875 req/s | avg  1133ms | ok=342746 err=99107
+  [3090s]   443715 reqs |    870 req/s | avg  1140ms | ok=344259 err=99456
+  [3085s]   445518 reqs |    865 req/s | avg  1146ms | ok=345736 err=99782
+  [3080s]   447929 reqs |    861 req/s | avg  1151ms | ok=347815 err=100114
+  [3075s]   451080 reqs |    859 req/s | avg  1155ms | ok=350611 err=100469
+  [3070s]   453074 reqs |    855 req/s | avg  1160ms | ok=352309 err=100765
+  [3065s]   455178 reqs |    851 req/s | avg  1167ms | ok=353970 err=101208
+  [3060s]   456679 reqs |    846 req/s | avg  1173ms | ok=355246 err=101433
+  [3055s]   458353 reqs |    841 req/s | avg  1180ms | ok=356586 err=101767
+  [3050s]   459763 reqs |    836 req/s | avg  1186ms | ok=357732 err=102031
+  [3045s]   461371 reqs |    831 req/s | avg  1193ms | ok=358999 err=102372
+^C
+>>> Stopping...
+
+============================================================
+  Cycle 1
+============================================================
+  Requests : 462600  (ok=359684  err=102916)
+  Success  : 77.8%
+  Latency  : avg=1211  p50=1008  p95=2661  p99=10000 ms
+  Range    : min=76  max=10012  stddev=1894 ms
+============================================================
+
+  ASG (workload-asg): 6 desired / 6 running
+>>> Done.: File name too long
+
+Command exit status: 1
+Script done on Sun Apr 12 13:43:36 2026

@@ -1,8 +1,8 @@
 {
-    "DEFAULT_URL"         : "",
-    "DEFAULT_WORKERS"     : 100,
-    "DEFAULT_STRESS_SECS" : 300,   
-    "DEFAULT_REST_SECS"   : 300,     
-    "DEFAULT_TIMEOUT"     : 5,
-    "REPORT_INTERVAL"     : 10 
+    "DEFAULT_URL"         : "http://workload-alb-157207967.us-east-2.elb.amazonaws.com/cpu.php",
+    "DEFAULT_WORKERS"     : 1000,
+    "DEFAULT_STRESS_SECS" : 3600,  
+    "DEFAULT_REST_SECS"   : 0,
+    "DEFAULT_TIMEOUT"     : 10,
+    "REPORT_INTERVAL"     : 5 
 }

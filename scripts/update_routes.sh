@@ -14,7 +14,7 @@
 # ──────────────────────────────────────────────────────────────────
 set -euo pipefail
 
-REGION=""                            # Set to your AWS region (e.g. us-east-2)
+REGION="us-east-2"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
@@ -42,7 +42,7 @@ WORKLOAD_RT_ID=$(aws ec2 describe-route-tables \
   --output text)
 
 echo "    Workload RT : ${WORKLOAD_RT_ID}"
-echo "    Firewall ENI: ${ASAV_ENI_ID}"
+echo "    Inside ENI: ${ASAV_INSIDE_ENI_ID}"
 echo "    IGW         : ${IGW_ID}"
 
 # ── Rollback mode ─────────────────────────────────────────────────
@@ -60,12 +60,12 @@ fi
 # ── Verify the ASAv ENI exists and is attached ────────────────────
 ENI_STATUS=$(aws ec2 describe-network-interfaces \
   --region "${REGION}" \
-  --network-interface-ids "${ASAV_ENI_ID}" \
+  --network-interface-ids "${ASAV_INSIDE_ENI_ID}" \
   --query 'NetworkInterfaces[0].Status' \
   --output text)
 
 if [[ "${ENI_STATUS}" != "in-use" ]]; then
-  echo "ERROR: Firewall ENI ${ASAV_ENI_ID} status is '${ENI_STATUS}', expected 'in-use'." >&2
+  echo "ERROR: Inside ENI ${ASAV_INSIDE_ENI_ID} status is '${ENI_STATUS}', expected 'in-use'." >&2
   echo "       Ensure the ASAv instance is running before updating routes." >&2
   exit 1
 fi
@@ -76,7 +76,7 @@ aws ec2 replace-route \
   --region "${REGION}" \
   --route-table-id "${WORKLOAD_RT_ID}" \
   --destination-cidr-block "0.0.0.0/0" \
-  --network-interface-id "${ASAV_ENI_ID}"
+  --network-interface-id "${ASAV_INSIDE_ENI_ID}"
 
 # ── Verify ────────────────────────────────────────────────────────
 echo ">>> Verifying route table..."
@@ -91,7 +91,7 @@ echo "════════════════════════�
 echo "  Route Update Complete"
 echo "════════════════════════════════════════════════════════════"
 echo "  Workload subnet traffic now flows through Cisco ASAv"
-echo "  Firewall ENI: ${ASAV_ENI_ID}"
+echo "  Inside ENI: ${ASAV_INSIDE_ENI_ID}"
 echo ""
 echo "  To rollback:  ./scripts/update_routes.sh --rollback"
 echo "════════════════════════════════════════════════════════════"

@@ -135,6 +135,12 @@ resource "aws_route_table" "workload" {
   depends_on = [aws_internet_gateway.main]
 }
 
+# Inside ENI subnet uses the ALB route table (direct IGW access, no firewall loop)
+resource "aws_route_table_association" "inside_eni" {
+  subnet_id      = aws_subnet.inside_eni.id
+  route_table_id = aws_route_table.alb.id
+}
+
 resource "aws_route_table_association" "workload" {
   subnet_id      = aws_subnet.workload.id
   route_table_id = aws_route_table.workload.id

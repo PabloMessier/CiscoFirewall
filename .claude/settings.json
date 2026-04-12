@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(aws ec2:*)",
+      "Bash(java -version)",
+      "Bash(go version:*)",
+      "Bash(brew install:*)",
+      "Bash(go mod:*)",
+      "Bash(go build:*)"
+    ]
+  }
+}
